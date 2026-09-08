@@ -1,0 +1,16 @@
+{
+  "name": "qwenty-questions",
+  "private": true,
+  "type": "module",
+  "workspaces": ["client", "worker"],
+  "scripts": {
+    "keys": "node scripts/generate-keys.mjs",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:worker": "npm run dev --workspace=worker",
+    "build": "npm run build --workspace=client",
+    "test": "tsx scripts/test-crypto.ts && tsx scripts/test-share.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
+  }
+}
