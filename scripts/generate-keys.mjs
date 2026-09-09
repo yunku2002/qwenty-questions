@@ -28,27 +28,18 @@ function upsertEnv(file, entries, defaults = {}) {
 }
 
 const pair = await crypto.subtle.generateKey(
-  {
-    name: "RSA-OAEP",
-    modulusLength: 2048,
-    publicExponent: new Uint8Array([1, 0, 1]),
-    hash: "SHA-256",
-  },
+  { name: "ECDH", namedCurve: "P-256" },
   true,
-  ["encrypt", "decrypt"],
+  ["deriveBits"],
 );
 
 const publicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
 const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
 
 delete publicJwk.d;
-delete publicJwk.p;
-delete publicJwk.q;
-delete publicJwk.dp;
-delete publicJwk.dq;
-delete publicJwk.qi;
-publicJwk.key_ops = ["encrypt"];
-privateJwk.key_ops = ["decrypt"];
+delete publicJwk.key_ops;
+publicJwk.ext = true;
+privateJwk.key_ops = ["deriveBits"];
 
 const publicJson = JSON.stringify(publicJwk);
 upsertEnv(

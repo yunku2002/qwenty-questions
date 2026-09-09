@@ -17,8 +17,8 @@ export interface Env {
 
 const MAX_FIELD = 50;
 const MAX_QUESTION = 150;
-const MAX_KEY = 512;
-const MAX_NONCE = 32;
+const MAX_KEY = 44;
+const MAX_NONCE = 16;
 const MAX_CIPHERTEXT = Math.ceil((MAX_FIELD * 4 + 16) / 3) * 4;
 const MAX_BODY_BYTES = MAX_NONCE + MAX_KEY + MAX_CIPHERTEXT + MAX_QUESTION + 256;
 const RATE_WINDOW_MS = 60000;

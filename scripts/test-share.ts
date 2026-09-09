@@ -1,4 +1,4 @@
-import { utf8ToBase64 } from "../shared/base64.ts";
+import { bytesToBase64 } from "../shared/base64.ts";
 import type { SharePayload } from "../client/src/crypto/envelope.ts";
 import {
   buildShareFragment,
@@ -6,14 +6,25 @@ import {
   parseShareInput,
 } from "../client/src/share.ts";
 
-const payload: SharePayload = {
-  secret: "YQ==",
-  key: "Yg==",
-  nonce: utf8ToBase64("n".repeat(12)),
-  hint: "hint",
-};
+function fakePayload(hint: string | null): SharePayload {
+  const secret = new Uint8Array(20).fill(1);
+  const key = new Uint8Array(33).fill(3);
+  key[0] = 0x02;
+  return {
+    secret: bytesToBase64(secret),
+    key: bytesToBase64(key),
+    nonce: bytesToBase64(new Uint8Array(12).fill(7)),
+    hint,
+  };
+}
 
+const payload = fakePayload("hint");
 const fragment = buildShareFragment(payload);
+if (/[+/=]/.test(fragment)) {
+  console.error("fragment not unpadded base64url", fragment);
+  process.exit(1);
+}
+
 const fromHash = parseShareFragment(`#${fragment}`);
 if (fromHash.kind !== "ok") {
   console.error("hash parse failed", fromHash);
@@ -47,11 +58,14 @@ if (parseShareInput("@@@").kind !== "invalid") {
   process.exit(1);
 }
 
-const missingHint = parseShareFragment(
-  `#${utf8ToBase64(JSON.stringify({ secret: "a", key: "b", nonce: "c" }))}`,
-);
-if (missingHint.kind !== "invalid") {
-  console.error("envelope without hint should be invalid", missingHint);
+const parsedNone = parseShareFragment(`#${buildShareFragment(fakePayload(null))}`);
+if (parsedNone.kind !== "ok" || parsedNone.payload.hint !== null) {
+  console.error("empty remainder should be null hint", parsedNone);
+  process.exit(1);
+}
+
+if (parseShareFragment("#QQ==").kind !== "invalid") {
+  console.error("padded standard base64 should be invalid");
   process.exit(1);
 }
 

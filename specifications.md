@@ -4,7 +4,8 @@ An LLM-based (not necessarily Qwen) twenty questions game answerer.
 
 ## Design Goals
 
-- Users create, share, and guess secrets.
+- Users create, share, and guess secrets through twenty questions games.
+	- Share links should be short.
 - The game uses an LLM to respond to questions about the secret, validate secrets for response suitability, and randomly generate secrets.
 - The server does not store any data at all.
 	- The secret (with the key and the nonce) always needs to be sent together with each question.
@@ -14,14 +15,15 @@ An LLM-based (not necessarily Qwen) twenty questions game answerer.
 
 ## Encryption
 
-AES-GCM + RSA-OAEP (SHA-256) hybrid with Web Crypto.
+AES-GCM + P-256 ECDH (ephemeral-static) and HKDF-SHA-256 hybrid with Web Crypto.
 
-- The RSA-2048 key pair is baked in and not rotated; the private key is not given to the client.
-- On both the front end and back end, the UTF-8 secret is encrypted with a random 256-bit AES key and a random 12-byte nonce.
+- The P-256 public key is a client env var (`VITE_PUBLIC_JWK`). The private key is a Worker secret (`PRIVATE_JWK`), not given to the client. The key pair is not rotated.
+- On both the front end and back end, the UTF-8 secret is encrypted with a 256-bit AES key and a random 12-byte nonce. Each encryption generates an ephemeral P-256 key pair; ECDH with the static public key and HKDF-SHA-256 (empty salt, info `qwenty-aes-256-gcm`) derives the AES key.
 - `secret` is the GCM output (ciphertext with the tag appended).
-- `key` is the RSA-encrypted AES key.
+- `key` is the 33-byte compressed SEC1 ephemeral public key (`0x02`/`0x03` ∥ x).
 - `secret`, `key`, and `nonce` (the envelope) are standard Base64 strings of those byte sequences.
-	- The share JSON, `/generate` output, and `/ask` input all use this same envelope.
+	- `/generate` output and `/ask` input use this same envelope.
+	- The share fragment is unpadded Base64URL of packed ciphertext length (2 bytes, unsigned big-endian), `secret`, `key`, `nonce`, and UTF-8 hint (empty remainder means `hint` is `null`).
 
 ## Front End
 
@@ -38,13 +40,7 @@ AES-GCM + RSA-OAEP (SHA-256) hybrid with Web Crypto.
 2. Optionally validate (via `/validate`) the suitability of the secret (but not the hint) for the LLM.
 	- Validation result is only for reference and may be ignored.
 3. Create a shareable link for others to solve the secret.
-	- Game data is passed via URI fragment as Base64-encoded JSON with the following data (envelope + hint):
-		```yaml
-		secret: string
-		key: string
-		nonce: string
-		hint: string | null
-		```
+	- Game data is passed via the URI fragment (see Encryption).
 
 ### Guess mode
 
@@ -56,7 +52,7 @@ Play a twenty questions game with either an encrypted secret (and a hint) shared
 	- The number of questions asked and the next question number are shown.
 	- Each question should show its number, except when the response is `FAILURE` or `INVALID`.
 - The hint, if given, can be viewed optionally.
-- The endpoint `/ask` is used for each question and response.
+- `/ask` is used for each question and response.
 	- `INVALID` questions do not count towards the 20 questions limit.
 	- Only `GUESS_CORRECT` and `REVEAL` are game over conditions.
 	- Since the endpoint already returns a message, the distinction between `YES`, `NO`, `MAYBE`, `N/A`, and `GUESS_WRONG` does not really matter, but the UI may introduce some effects.
@@ -75,7 +71,7 @@ To be deployed on Cloudflare with LLM calls handled by Workers AI (specific mode
 
 ### Endpoints
 
-- `/generate`: Creates a random secret and a hint in the given language for solving, returned with a randomly generated AES key. On `INVALID`, other fields should be ignored, same as `FAILURE`.
+- `/generate`: Creates a random secret and a hint in the given language for solving, returned with a randomly generated envelope. On `INVALID`, other fields should be ignored, same as `FAILURE`.
 	```yaml
 	input:
 		language: string

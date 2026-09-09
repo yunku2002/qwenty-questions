@@ -11,10 +11,13 @@ export function base64ToBytes(value: string): Uint8Array {
   return out;
 }
 
-export function utf8ToBase64(text: string): string {
-  return bytesToBase64(new TextEncoder().encode(text));
+export function bytesToBase64Url(bytes: Uint8Array): string {
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-export function base64ToUtf8(value: string): string {
-  return new TextDecoder().decode(base64ToBytes(value));
+export function base64UrlToBytes(value: string): Uint8Array {
+  if (!/^[A-Za-z0-9_-]*$/.test(value)) throw new Error("invalid base64url");
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = (4 - (padded.length % 4)) % 4;
+  return base64ToBytes(padded + "=".repeat(pad));
 }
