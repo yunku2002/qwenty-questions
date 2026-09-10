@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, failureKey, type DisplayCode } from "../api";
-import type { SharePayload } from "../crypto/envelope";
-import { shareIdentity, shareUrl } from "../share";
-
-const MAX_QUESTION = 150;
+import { sessionFromTurns, shareIdentity, shareUrl, turnsFromMessages, type SharePayload } from "../share";
+import { utf8Field } from "../utf8-input";
+import { MAX_UTF8 } from "../../../shared/utf8";
 
 type Message = {
   role: "user" | "bot";
@@ -35,25 +34,29 @@ function codeClass(code: DisplayCode): string {
   return code === "N/A" ? "N-A" : code;
 }
 
-function codeLabel(code: DisplayCode): string {
-  return code.replace(/^GUESS_/, "");
+function codeKey(code: DisplayCode): string {
+  return code === "N/A" ? "codeNA" : `code${code}`;
 }
 
 export function Guess({ payload, onHome }: Props) {
   const { t } = useTranslation();
   const id = shareIdentity(payload);
   const saved = sessions.get(id);
-  const [messages, setMessages] = useState<Message[]>(() => saved?.messages ?? []);
+  const fromTurns = sessionFromTurns(payload.turns ?? []);
+  const [messages, setMessages] = useState<Message[]>(
+    () => saved?.messages ?? fromTurns.messages,
+  );
   const [draft, setDraft] = useState(() => saved?.draft ?? "");
   const [busy, setBusy] = useState(false);
-  const [asked, setAsked] = useState(() => saved?.asked ?? 0);
+  const [asked, setAsked] = useState(() => saved?.asked ?? fromTurns.asked);
   const [showHint, setShowHint] = useState(() => saved?.showHint ?? false);
   const [over, setOver] = useState<"GUESS_CORRECT" | "REVEAL" | null>(
-    () => saved?.over ?? null,
+    () => saved?.over ?? fromTurns.over,
   );
   const [revealed, setRevealed] = useState<string | null>(() => saved?.revealed ?? null);
   const [shareLink, setShareLink] = useState<string | null>(() => saved?.shareLink ?? null);
   const [copied, setCopied] = useState(() => saved?.copied ?? false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const snapshotRef = useRef<GuessSession>({
@@ -179,15 +182,17 @@ export function Guess({ payload, onHome }: Props) {
             <header>
               <span>
                 {msg.role === "user" ? t("question") : t("response")}
-                {msg.n != null ? ` · ${msg.n}` : ""}
+                {msg.n != null ? ` ${msg.n}` : ""}
               </span>
-              {msg.code && (
+              {msg.code && msg.text ? (
                 <span className={`code ${codeClass(msg.code)}`}>
-                  {codeLabel(msg.code)}
+                  {t(codeKey(msg.code))}
                 </span>
-              )}
+              ) : null}
             </header>
-            <div>{msg.text}</div>
+            <div className={msg.code && !msg.text ? `code ${codeClass(msg.code)}` : undefined}>
+              {msg.text || (msg.code ? t(codeKey(msg.code)) : "")}
+            </div>
           </article>
         ))}
       </div>
@@ -217,10 +222,8 @@ export function Guess({ payload, onHome }: Props) {
       >
         <input
           ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          {...utf8Field(MAX_UTF8, draft, setDraft)}
           placeholder={t("composerPlaceholder")}
-          maxLength={MAX_QUESTION}
           disabled={busy}
         />
         <button className="primary" type="submit" disabled={busy || !draft.trim()}>
@@ -244,13 +247,27 @@ export function Guess({ payload, onHome }: Props) {
           className="ghost"
           type="button"
           onClick={() => {
-            setShareLink(shareUrl(payload));
-            setCopied(false);
+            void (async () => {
+              try {
+                setShareLink(
+                  await shareUrl({
+                    ...payload,
+                    turns: turnsFromMessages(messages),
+                  }),
+                );
+                setShareError(null);
+                setCopied(false);
+              } catch {
+                setShareLink(null);
+                setShareError(t("failure"));
+              }
+            })();
           }}
         >
-          {t("shareThis")}
+          {t("shareProgress")}
         </button>
       </div>
+      {shareError && <p className="result">{shareError}</p>}
       {shareLink && (
         <>
           <div className="field">

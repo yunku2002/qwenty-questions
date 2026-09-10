@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiConfigured, failureKey, generate, validate } from "../api";
-import { encryptSecret, type SharePayload } from "../crypto/envelope";
+import { encryptSecret } from "../crypto/envelope";
 import { generateLanguageLabel } from "../i18n";
-import { parseShareInput, shareUrl } from "../share";
-
-const MAX_FIELD = 50;
+import { parseShareInput, shareUrl, type SharePayload } from "../share";
+import { utf8Field } from "../utf8-input";
+import { MAX_FIELD_UTF8 } from "../../../shared/utf8";
 
 type Props = {
   onPlay: (payload: SharePayload) => void;
@@ -56,8 +56,9 @@ export function Home({ onPlay }: Props) {
       const payload = {
         ...envelope,
         hint: hint.trim() ? hint.trim() : null,
+        turns: [],
       };
-      setLink(shareUrl(payload));
+      setLink(await shareUrl(payload));
       setCopied(false);
     } catch {
       setError(t("failure"));
@@ -84,6 +85,7 @@ export function Home({ onPlay }: Props) {
         key: result.key,
         nonce: result.nonce,
         hint: result.hint,
+        turns: [],
       });
     } catch {
       setError(t("failureNetwork"));
@@ -103,13 +105,11 @@ export function Home({ onPlay }: Props) {
           <label htmlFor="secret">{t("secretLabel")}</label>
           <input
             id="secret"
-            value={secret}
-            onChange={(e) => {
-              setSecret(e.target.value);
+            {...utf8Field(MAX_FIELD_UTF8, secret, (v) => {
+              setSecret(v);
               setLink(null);
               setCopied(false);
-            }}
-            maxLength={MAX_FIELD}
+            })}
             placeholder={t("secretPlaceholder")}
           />
         </div>
@@ -117,13 +117,11 @@ export function Home({ onPlay }: Props) {
           <label htmlFor="hint">{t("hintLabel")}</label>
           <input
             id="hint"
-            value={hint}
-            onChange={(e) => {
-              setHint(e.target.value);
+            {...utf8Field(MAX_FIELD_UTF8, hint, (v) => {
+              setHint(v);
               setLink(null);
               setCopied(false);
-            }}
-            maxLength={MAX_FIELD}
+            })}
           />
         </div>
         <div className="row">
@@ -187,9 +185,7 @@ export function Home({ onPlay }: Props) {
           <label htmlFor="gen-lang">{t("randomLanguageLabel")}</label>
           <input
             id="gen-lang"
-            value={language}
-            maxLength={MAX_FIELD}
-            onChange={(e) => setLanguage(e.target.value)}
+            {...utf8Field(MAX_FIELD_UTF8, language, setLanguage)}
           />
         </div>
         <button
@@ -209,13 +205,15 @@ export function Home({ onPlay }: Props) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const parsed = parseShareInput(shareLink);
-            if (parsed.kind !== "ok") {
-              setShareError(t("invalidSharePaste"));
-              return;
-            }
-            setShareError(null);
-            onPlay(parsed.payload);
+            void (async () => {
+              const parsed = await parseShareInput(shareLink);
+              if (parsed.kind !== "ok") {
+                setShareError(t("invalidSharePaste"));
+                return;
+              }
+              setShareError(null);
+              onPlay(parsed.payload);
+            })();
           }}
         >
           <div className="field">

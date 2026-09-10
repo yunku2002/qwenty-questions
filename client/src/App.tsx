@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { SharePayload } from "./crypto/envelope";
 import { Guess } from "./pages/Guess";
 import { Home } from "./pages/Home";
 import { InvalidShare } from "./pages/InvalidShare";
 import { resolveUiLanguage, UI_LANGUAGES } from "./i18n";
-import { buildShareFragment, parseShareFragment, shareIdentity } from "./share";
+import {
+  buildShareFragment,
+  parseShareFragment,
+  shareIdentity,
+  type SharePayload,
+} from "./share";
 import { applyTheme, readTheme, type ThemeChoice } from "./theme";
 
 type Screen =
@@ -13,8 +17,9 @@ type Screen =
   | { kind: "guess"; payload: SharePayload }
   | { kind: "invalid" };
 
-function screenFromHash(): Screen {
-  const parsed = parseShareFragment(window.location.hash);
+function screenFromParse(
+  parsed: Awaited<ReturnType<typeof parseShareFragment>>,
+): Screen {
   if (parsed.kind === "empty") return { kind: "home" };
   if (parsed.kind === "invalid") return { kind: "invalid" };
   return { kind: "guess", payload: parsed.payload };
@@ -23,12 +28,23 @@ function screenFromHash(): Screen {
 export default function App() {
   const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState<ThemeChoice>(() => readTheme());
-  const [screen, setScreen] = useState<Screen>(() => screenFromHash());
+  const [screen, setScreen] = useState<Screen | null>(() =>
+    window.location.hash ? null : { kind: "home" },
+  );
 
   useEffect(() => {
-    const onHash = () => setScreen(screenFromHash());
+    let cancelled = false;
+    async function applyHash() {
+      const parsed = await parseShareFragment(window.location.hash);
+      if (!cancelled) setScreen(screenFromParse(parsed));
+    }
+    void applyHash();
+    const onHash = () => void applyHash();
     window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("hashchange", onHash);
+    };
   }, []);
 
   function goHome() {
@@ -36,15 +52,15 @@ export default function App() {
     setScreen({ kind: "home" });
   }
 
-  function play(payload: SharePayload) {
+  async function play(payload: SharePayload) {
     const url = new URL(window.location.href);
-    url.hash = buildShareFragment(payload);
+    url.hash = await buildShareFragment(payload);
     history.replaceState(null, "", url.toString());
     setScreen({ kind: "guess", payload });
   }
 
   return (
-    <div className={`app${screen.kind === "guess" ? " app-guess" : ""}`}>
+    <div className={`app${screen?.kind === "guess" ? " app-guess" : ""}`}>
       <header className="header">
         <div className="header-copy">
           <a
@@ -97,15 +113,15 @@ export default function App() {
         </div>
       </header>
 
-      {screen.kind === "home" && <Home onPlay={play} />}
-      {screen.kind === "guess" && (
+      {screen?.kind === "home" && <Home onPlay={(payload) => void play(payload)} />}
+      {screen?.kind === "guess" && (
         <Guess
           key={shareIdentity(screen.payload)}
           payload={screen.payload}
           onHome={goHome}
         />
       )}
-      {screen.kind === "invalid" && <InvalidShare onHome={goHome} />}
+      {screen?.kind === "invalid" && <InvalidShare onHome={goHome} />}
     </div>
   );
 }

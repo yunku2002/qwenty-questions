@@ -8,6 +8,7 @@ import {
   generateUser,
   validateUser,
 } from "./prompts";
+import { GCM_TAG_LEN, MAX_UTF8, utf8Len } from "../../shared/utf8";
 
 export interface Env {
   AI: Ai;
@@ -15,12 +16,11 @@ export interface Env {
   PRIVATE_JWK?: string;
 }
 
-const MAX_FIELD = 50;
-const MAX_QUESTION = 150;
 const MAX_KEY = 44;
 const MAX_NONCE = 16;
-const MAX_CIPHERTEXT = Math.ceil((MAX_FIELD * 4 + 16) / 3) * 4;
-const MAX_BODY_BYTES = MAX_NONCE + MAX_KEY + MAX_CIPHERTEXT + MAX_QUESTION + 256;
+const MAX_SECRET = MAX_UTF8 - GCM_TAG_LEN;
+const MAX_CIPHERTEXT = Math.ceil(MAX_UTF8 / 3) * 4;
+const MAX_BODY_BYTES = MAX_NONCE + MAX_KEY + MAX_CIPHERTEXT + MAX_UTF8 + 256;
 const RATE_WINDOW_MS = 60000;
 const RATE_MAX = 30;
 const ASK_CODES = new Set([
@@ -84,10 +84,10 @@ async function readBody(request: Request): Promise<Record<string, unknown> | nul
   }
 }
 
-function asString(value: unknown, max: number): string | null {
+function asString(value: unknown, maxBytes: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
-  if (!trimmed || trimmed.length > max) return null;
+  if (!trimmed || utf8Len(trimmed) > maxBytes) return null;
   return trimmed;
 }
 
@@ -124,7 +124,7 @@ async function handleGenerate(
   env: Env,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const language = asString(body.language, MAX_FIELD);
+  const language = asString(body.language, MAX_UTF8);
   if (!language) return fail("input");
 
   const raw = await runLlm(
@@ -146,8 +146,8 @@ async function handleGenerate(
   const obj = parsed as Record<string, unknown>;
   if (obj.status === "INVALID") return json({ status: "INVALID" });
   if (obj.status !== "VALID") return fail("parse");
-  const secret = asString(obj.secret, MAX_FIELD);
-  const hint = asString(obj.hint, MAX_FIELD);
+  const secret = asString(obj.secret, MAX_SECRET);
+  const hint = asString(obj.hint, MAX_UTF8);
   if (!secret || !hint) return fail("parse");
 
   const envelope = await encryptSecret(secret, env.PRIVATE_JWK);
@@ -158,7 +158,7 @@ async function handleValidate(
   env: Env,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const secret = asString(body.secret, MAX_FIELD);
+  const secret = asString(body.secret, MAX_SECRET);
   if (!secret) return fail("input");
 
   const raw = await runLlm(
@@ -193,7 +193,7 @@ async function handleAsk(
   const ciphertext = asString(body.secret, MAX_CIPHERTEXT);
   const key = asString(body.key, MAX_KEY);
   const nonce = asString(body.nonce, MAX_NONCE);
-  const question = asString(body.question, MAX_QUESTION);
+  const question = asString(body.question, MAX_UTF8);
   if (!ciphertext || !key || !nonce || !question) return fail("input");
 
   let plaintext: string;

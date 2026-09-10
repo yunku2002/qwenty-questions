@@ -1,13 +1,13 @@
 import type { Envelope } from "./crypto/envelope";
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(
+const API_URL = (import.meta.env?.VITE_API_URL as string | undefined)?.replace(
   /\/$/,
   "",
 );
 
 const TEST_DELAY_MS = 200;
 
-const ASK_CODES = [
+export const ASK_CODES = [
   "YES",
   "NO",
   "MAYBE",
@@ -36,6 +36,10 @@ export type DisplayCode = AskCode | "FAILURE";
 export type AskResult =
   | { status: "SUCCESS"; code: AskCode; message: string; secret?: string }
   | { status: "FAILURE"; cause?: FailCause };
+
+export function isAskCode(value: string): value is AskCode {
+  return (ASK_CODES as readonly string[]).includes(value);
+}
 
 export function failureKey(
   cause?: FailCause,

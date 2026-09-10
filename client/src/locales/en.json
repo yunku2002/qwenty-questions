@@ -55,9 +55,18 @@
   "secretShown": "The answer is {{secret}}.",
   "keepAsking": "You can still ask.",
   "home": "Home",
-  "shareThis": "Share this game",
+  "shareProgress": "Share progress",
   "invalidShareTitle": "This link does not work",
   "invalidShareBody": "The link is incomplete or damaged.",
   "question": "Question",
-  "response": "Response"
+  "response": "Response",
+  "codeYES": "YES",
+  "codeNO": "NO",
+  "codeMAYBE": "MAYBE",
+  "codeNA": "N/A",
+  "codeINVALID": "INVALID",
+  "codeGUESS_CORRECT": "CORRECT",
+  "codeGUESS_WRONG": "WRONG",
+  "codeREVEAL": "REVEAL",
+  "codeFAILURE": "FAILURE"
 }

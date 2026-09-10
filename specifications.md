@@ -5,7 +5,10 @@ An LLM-based (not necessarily Qwen) twenty questions game answerer.
 ## Design Goals
 
 - Users create, share, and guess secrets through twenty questions games.
+	- Games' progress/results can also be shared as an extended share scheme.
 	- Share links should be short.
+		- Elliptic curves are used for encryption instead of RSA.
+		- Only questions and response codes are kept; messages are dropped.
 - The game uses an LLM to respond to questions about the secret, validate secrets for response suitability, and randomly generate secrets.
 - The server does not store any data at all.
 	- The secret (with the key and the nonce) always needs to be sent together with each question.
@@ -23,7 +26,7 @@ AES-GCM + P-256 ECDH (ephemeral-static) and HKDF-SHA-256 hybrid with Web Crypto.
 - `key` is the 33-byte compressed SEC1 ephemeral public key (`0x02`/`0x03` ∥ x).
 - `secret`, `key`, and `nonce` (the envelope) are standard Base64 strings of those byte sequences.
 	- `/generate` output and `/ask` input use this same envelope.
-	- The share fragment is unpadded Base64URL of packed ciphertext length (2 bytes, unsigned big-endian), `secret`, `key`, `nonce`, and UTF-8 hint (empty remainder means `hint` is `null`).
+	- The share fragment is unpadded Base64URL of packed ciphertext length (1 byte), `secret`, `key`, `nonce`, UTF-8 hint length (1 byte) and hint, and deflate-raw of repeated question length (1 byte), UTF-8 question, and response code (1 byte).
 
 ## Front End
 

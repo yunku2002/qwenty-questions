@@ -2,10 +2,6 @@ import { ECDH, encryptWithPublic, type Envelope } from "../../../shared/ec-envel
 
 export type { Envelope };
 
-export type SharePayload = Envelope & {
-  hint: string | null;
-};
-
 let cachedRaw: string | null = null;
 let publicKeyPromise: Promise<CryptoKey> | null = null;
 
