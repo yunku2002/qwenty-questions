@@ -160,6 +160,7 @@ Return REVEAL when asked to reveal the secret (either with a command or with a q
 "message" should be kept simple and in the language of the question, which may differ from the language of the prompt or the secret.
 When necessary, for MAYBE, N/A, and INVALID, very briefly describe the reason without revealing the secret or any properties about the secret, not even something implied by the question.
 Remember that it should also be a natural response as a player, so don't just list the reason; state your action or instruct the guesser.
+Don't forget to exclude the secret from the reason.
 There should be no additional information for YES and NO (apart from the direct answer), but when a question contains a negative, the message should be a full sentence because the short answer can be ambiguous.
 If a guess in the form of a question contains a negative, ignore it, and treat it as correct as long as the secret is correctly identified.
 For REVEAL, simply reveal the secret in a full sentence, in the language of the question.

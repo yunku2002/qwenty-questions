@@ -210,8 +210,9 @@ async function handleAsk(
     env.AI,
     ASK_SYSTEM,
     askUser(plaintext, question),
-    300,
+    800,
     env.LOG_LLM === "true",
+    "high",
   );
   if (!raw) return fail("llm");
 
