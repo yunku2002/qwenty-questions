@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, failureKey, type DisplayCode } from "../api";
 import type { SharePayload } from "../crypto/envelope";
-import { shareUrl } from "../share";
+import { shareIdentity, shareUrl } from "../share";
 
 const MAX_QUESTION = 150;
 
@@ -12,6 +12,19 @@ type Message = {
   code?: DisplayCode;
   n?: number;
 };
+
+type GuessSession = {
+  messages: Message[];
+  draft: string;
+  asked: number;
+  showHint: boolean;
+  over: "GUESS_CORRECT" | "REVEAL" | null;
+  revealed: string | null;
+  shareLink: string | null;
+  copied: boolean;
+};
+
+const sessions = new Map<string, GuessSession>();
 
 type Props = {
   payload: SharePayload;
@@ -28,17 +41,47 @@ function codeLabel(code: DisplayCode): string {
 
 export function Guess({ payload, onHome }: Props) {
   const { t } = useTranslation();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState("");
+  const id = shareIdentity(payload);
+  const saved = sessions.get(id);
+  const [messages, setMessages] = useState<Message[]>(() => saved?.messages ?? []);
+  const [draft, setDraft] = useState(() => saved?.draft ?? "");
   const [busy, setBusy] = useState(false);
-  const [asked, setAsked] = useState(0);
-  const [showHint, setShowHint] = useState(false);
-  const [over, setOver] = useState<"GUESS_CORRECT" | "REVEAL" | null>(null);
-  const [revealed, setRevealed] = useState<string | null>(null);
-  const [shareLink, setShareLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [asked, setAsked] = useState(() => saved?.asked ?? 0);
+  const [showHint, setShowHint] = useState(() => saved?.showHint ?? false);
+  const [over, setOver] = useState<"GUESS_CORRECT" | "REVEAL" | null>(
+    () => saved?.over ?? null,
+  );
+  const [revealed, setRevealed] = useState<string | null>(() => saved?.revealed ?? null);
+  const [shareLink, setShareLink] = useState<string | null>(() => saved?.shareLink ?? null);
+  const [copied, setCopied] = useState(() => saved?.copied ?? false);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const snapshotRef = useRef<GuessSession>({
+    messages,
+    draft,
+    asked,
+    showHint,
+    over,
+    revealed,
+    shareLink,
+    copied,
+  });
+  snapshotRef.current = {
+    messages,
+    draft,
+    asked,
+    showHint,
+    over,
+    revealed,
+    shareLink,
+    copied,
+  };
+
+  useEffect(() => {
+    return () => {
+      sessions.set(id, snapshotRef.current);
+    };
+  }, [id]);
 
   useEffect(() => {
     const el = chatRef.current;

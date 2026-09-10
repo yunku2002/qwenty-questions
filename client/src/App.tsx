@@ -5,7 +5,7 @@ import { Guess } from "./pages/Guess";
 import { Home } from "./pages/Home";
 import { InvalidShare } from "./pages/InvalidShare";
 import { resolveUiLanguage, UI_LANGUAGES } from "./i18n";
-import { buildShareFragment, parseShareFragment } from "./share";
+import { buildShareFragment, parseShareFragment, shareIdentity } from "./share";
 import { applyTheme, readTheme, type ThemeChoice } from "./theme";
 
 type Screen =
@@ -46,7 +46,7 @@ export default function App() {
   return (
     <div className={`app${screen.kind === "guess" ? " app-guess" : ""}`}>
       <header className="header">
-        <div className="header-bar">
+        <div className="header-copy">
           <a
             className="brand"
             href={window.location.pathname}
@@ -57,49 +57,53 @@ export default function App() {
           >
             <h1>{t("title")}</h1>
           </a>
-          <div className="toolbar">
-            <label className="lang-select">
-              <select
-                aria-label={t("language")}
-                value={resolveUiLanguage(i18n.language)}
-                onChange={(e) => void i18n.changeLanguage(e.target.value)}
-              >
-                {UI_LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="seg" aria-label={t("theme")}>
-              {(["light", "dark", "system"] as const).map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  aria-pressed={theme === choice}
-                  onClick={() => {
-                    setTheme(choice);
-                    applyTheme(choice);
-                  }}
-                >
-                  {t(
-                    choice === "light"
-                      ? "themeLight"
-                      : choice === "dark"
-                        ? "themeDark"
-                        : "themeSystem",
-                  )}
-                </button>
+          <p className="tagline">{t("tagline")}</p>
+        </div>
+        <div className="toolbar">
+          <label className="lang-select">
+            <select
+              aria-label={t("language")}
+              value={resolveUiLanguage(i18n.language)}
+              onChange={(e) => void i18n.changeLanguage(e.target.value)}
+            >
+              {UI_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
               ))}
-            </div>
+            </select>
+          </label>
+          <div className="seg" aria-label={t("theme")}>
+            {(["light", "dark", "system"] as const).map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                aria-pressed={theme === choice}
+                onClick={() => {
+                  setTheme(choice);
+                  applyTheme(choice);
+                }}
+              >
+                {t(
+                  choice === "light"
+                    ? "themeLight"
+                    : choice === "dark"
+                      ? "themeDark"
+                      : "themeSystem",
+                )}
+              </button>
+            ))}
           </div>
         </div>
-        <p className="tagline">{t("tagline")}</p>
       </header>
 
       {screen.kind === "home" && <Home onPlay={play} />}
       {screen.kind === "guess" && (
-        <Guess payload={screen.payload} onHome={goHome} />
+        <Guess
+          key={shareIdentity(screen.payload)}
+          payload={screen.payload}
+          onHome={goHome}
+        />
       )}
       {screen.kind === "invalid" && <InvalidShare onHome={goHome} />}
     </div>

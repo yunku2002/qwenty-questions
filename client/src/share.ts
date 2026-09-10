@@ -94,6 +94,10 @@ export function parseShareInput(input: string): ShareParse {
   return parsed;
 }
 
+export function shareIdentity(payload: SharePayload): string {
+  return `${payload.secret}:${payload.key}:${payload.nonce}:${payload.hint ?? ""}`;
+}
+
 export function buildShareFragment(payload: SharePayload): string {
   return bytesToBase64Url(packShare(payload));
 }

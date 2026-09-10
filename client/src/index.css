@@ -92,11 +92,6 @@ a {
   overflow: hidden;
 }
 
-.app-guess .header {
-  flex: 0 0 auto;
-  margin-bottom: 1rem;
-}
-
 .app-guess .card {
   flex: 1 1 auto;
   min-height: 0;
@@ -136,20 +131,22 @@ a {
 
 .header {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
 }
 
-.header-bar {
+.header-copy {
+  min-width: 0;
+  flex: 1 1 12rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .brand {
-  min-width: 0;
   text-decoration: none;
   color: inherit;
 }
@@ -172,7 +169,8 @@ a {
   align-items: stretch;
   gap: 0.4rem;
   justify-content: flex-end;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  margin-inline-start: auto;
 }
 
 .seg {
