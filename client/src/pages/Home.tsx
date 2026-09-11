@@ -61,7 +61,7 @@ export function Home({ onPlay }: Props) {
       setLink(await shareUrl(payload));
       setCopied(false);
     } catch {
-      setError(t("failure"));
+      setError(t("shareFailed"));
     } finally {
       setBusy(null);
     }

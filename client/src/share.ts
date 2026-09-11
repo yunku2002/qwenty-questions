@@ -1,6 +1,6 @@
 import { ASK_CODES, isAskCode, type AskCode } from "./api";
 import { base64ToBytes, base64UrlToBytes, bytesToBase64, bytesToBase64Url } from "../../shared/base64";
-import { deflateRaw, inflateRaw } from "./deflate";
+import { deflateSync, inflateSync } from "fflate";
 import { GCM_TAG_LEN, MAX_UTF8, utf8Bytes } from "../../shared/utf8";
 import type { Envelope } from "./crypto/envelope";
 
@@ -90,7 +90,7 @@ async function packShare(payload: SharePayload): Promise<Uint8Array> {
   const hintBytes = payload.hint ? utf8Bytes(payload.hint) : new Uint8Array(0);
   if (hintBytes.length > MAX_UTF8) throw new Error("hint too long");
   const progress =
-    turns.length > 0 ? await deflateRaw(packTurns(turns)) : new Uint8Array(0);
+    turns.length > 0 ? deflateSync(packTurns(turns)) : new Uint8Array(0);
   if (turns.length > 0 && progress.length === 0) {
     throw new Error("deflate failed");
   }
@@ -145,7 +145,7 @@ async function unpackShare(bytes: Uint8Array): Promise<SharePayload | null> {
     offset += hintLen;
     if (offset < bytes.length) {
       try {
-        const inflated = await inflateRaw(bytes.subarray(offset));
+        const inflated = inflateSync(bytes.subarray(offset));
         const parsed = unpackTurns(inflated);
         if (!parsed || parsed.length === 0) return null;
         turns = parsed;

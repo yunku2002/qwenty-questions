@@ -255,7 +255,7 @@ export function Guess({ payload }: Props) {
                 setCopied(false);
               } catch {
                 setShareLink(null);
-                setShareError(t("failure"));
+                setShareError(t("shareFailed"));
               }
             })();
           }}

@@ -43,11 +43,12 @@ export function isAskCode(value: string): value is AskCode {
 
 export function failureKey(
   cause?: FailCause,
-): "failure" | "failureParse" | "failureDecrypt" | "failureInput" | "failureNetwork" {
+): "failure" | "failureLlm" | "failureParse" | "failureDecrypt" | "failureInput" | "failureNetwork" {
   if (cause === "parse") return "failureParse";
   if (cause === "decrypt") return "failureDecrypt";
   if (cause === "input") return "failureInput";
   if (cause === "network") return "failureNetwork";
+  if (cause === "llm") return "failureLlm";
   return "failure";
 }
 
