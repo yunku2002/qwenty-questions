@@ -27,7 +27,6 @@ const sessions = new Map<string, GuessSession>();
 
 type Props = {
   payload: SharePayload;
-  onHome: () => void;
 };
 
 function codeClass(code: DisplayCode): string {
@@ -38,7 +37,7 @@ function codeKey(code: DisplayCode): string {
   return code === "N/A" ? "codeNA" : `code${code}`;
 }
 
-export function Guess({ payload, onHome }: Props) {
+export function Guess({ payload }: Props) {
   const { t } = useTranslation();
   const id = shareIdentity(payload);
   const saved = sessions.get(id);
@@ -148,8 +147,8 @@ export function Guess({ payload, onHome }: Props) {
 
   return (
     <section className="card">
+      <h2>{t("guessTitle")}</h2>
       <div className="meta">
-        <strong>{t("guessTitle")}</strong>
         <span>
           {asked >= 20
             ? t("questionOver", { current: asked })
@@ -164,17 +163,14 @@ export function Guess({ payload, onHome }: Props) {
           >
             {showHint ? t("hideHint") : t("showHint")}
           </button>
-        ) : null}
-        <button className="linkish meta-home" type="button" onClick={onHome}>
-          {t("home")}
-        </button>
+        ) : (
+          <span>{t("noHint")}</span>
+        )}
       </div>
 
-      {payload.hint ? (
-        showHint && <p className="hint">{t("hintShown", { hint: payload.hint })}</p>
-      ) : (
-        <p className="lead">{t("noHint")}</p>
-      )}
+      {payload.hint && showHint ? (
+        <p className="hint">{t("hintShown", { hint: payload.hint })}</p>
+      ) : null}
 
       <div className="chat" ref={chatRef}>
         {messages.map((msg, i) => (

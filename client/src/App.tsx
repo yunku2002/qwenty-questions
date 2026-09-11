@@ -25,6 +25,12 @@ function screenFromParse(
   return { kind: "guess", payload: parsed.payload };
 }
 
+function screenKey(screen: Screen | null): string {
+  if (!screen) return "";
+  if (screen.kind === "guess") return `guess:${shareIdentity(screen.payload)}`;
+  return screen.kind;
+}
+
 export default function App() {
   const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState<ThemeChoice>(() => readTheme());
@@ -41,38 +47,56 @@ export default function App() {
     void applyHash();
     const onHash = () => void applyHash();
     window.addEventListener("hashchange", onHash);
+    window.addEventListener("popstate", onHash);
     return () => {
       cancelled = true;
       window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("popstate", onHash);
     };
   }, []);
 
-  function goHome() {
-    history.replaceState(null, "", window.location.pathname + window.location.search);
-    setScreen({ kind: "home" });
+  const homeHref = window.location.pathname + window.location.search;
+
+  function navigate(next: Screen, url: string) {
+    if (screenKey(screen) && screenKey(screen) !== screenKey(next)) {
+      history.pushState(null, "", url);
+    } else {
+      history.replaceState(null, "", url);
+    }
+    setScreen(next);
   }
 
   async function play(payload: SharePayload) {
     const url = new URL(window.location.href);
     url.hash = await buildShareFragment(payload);
-    history.replaceState(null, "", url.toString());
-    setScreen({ kind: "guess", payload });
+    navigate({ kind: "guess", payload }, url.toString());
   }
 
   return (
     <div className={`app${screen?.kind === "guess" ? " app-guess" : ""}`}>
       <header className="header">
         <div className="header-copy">
-          <a
-            className="brand"
-            href={window.location.pathname}
-            onClick={(e) => {
-              e.preventDefault();
-              goHome();
-            }}
-          >
-            <h1>{t("title")}</h1>
-          </a>
+          <h1>
+            <a
+              className="brand"
+              href={homeHref}
+              onClick={(e) => {
+                if (
+                  e.button !== 0 ||
+                  e.metaKey ||
+                  e.ctrlKey ||
+                  e.shiftKey ||
+                  e.altKey
+                ) {
+                  return;
+                }
+                e.preventDefault();
+                navigate({ kind: "home" }, homeHref);
+              }}
+            >
+              {t("title")}
+            </a>
+          </h1>
           <p className="tagline">{t("tagline")}</p>
         </div>
         <div className="toolbar">
@@ -113,15 +137,18 @@ export default function App() {
         </div>
       </header>
 
-      {screen?.kind === "home" && <Home onPlay={(payload) => void play(payload)} />}
+      {screen && (
+        <div hidden={screen.kind !== "home"}>
+          <Home onPlay={(payload) => void play(payload)} />
+        </div>
+      )}
       {screen?.kind === "guess" && (
         <Guess
           key={shareIdentity(screen.payload)}
           payload={screen.payload}
-          onHome={goHome}
         />
       )}
-      {screen?.kind === "invalid" && <InvalidShare onHome={goHome} />}
+      {screen?.kind === "invalid" && <InvalidShare />}
     </div>
   );
 }

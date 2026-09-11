@@ -146,15 +146,15 @@ a {
   gap: 0.35rem;
 }
 
-.brand {
-  text-decoration: none;
-  color: inherit;
-}
-
-.brand h1 {
+.header-copy h1 {
   margin: 0;
   font-size: 1.85rem;
   line-height: 1.15;
+}
+
+.brand {
+  text-decoration: none;
+  color: inherit;
 }
 
 .tagline {
@@ -221,6 +221,8 @@ a {
   margin: 0;
   padding: 0;
   cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .card {
@@ -243,6 +245,10 @@ a {
 .lead {
   margin: 0 0 1.1rem;
   color: var(--muted);
+}
+
+.lead:last-child {
+  margin-bottom: 0;
 }
 
 label {
@@ -393,10 +399,6 @@ button:disabled {
   align-items: center;
   color: var(--muted);
   font-size: 0.9rem;
-}
-
-.meta-home {
-  margin-left: auto;
 }
 
 .composer {
