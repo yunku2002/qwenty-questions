@@ -1,6 +1,7 @@
 import type { Ai } from "@cloudflare/workers-types";
 
-const MODEL = "@cf/openai/gpt-oss-120b";
+export const ASK_MODEL = "@cf/openai/gpt-oss-120b";
+export const GENERATE_MODEL = "@cf/qwen/qwen3.8-27b";
 const TIMEOUT_MS = 15000;
 
 type AiResult = {
@@ -9,10 +10,11 @@ type AiResult = {
 };
 
 function thinkingOptions(
+  model: string,
   effort: "low" | "medium" | "high",
 ): Record<string, unknown> {
-  if (MODEL.includes("gpt-oss")) return { reasoning_effort: effort };
-  if (MODEL.includes("qwen")) {
+  if (model.includes("gpt-oss")) return { reasoning_effort: effort };
+  if (model.includes("qwen")) {
     return { chat_template_kwargs: { enable_thinking: false } };
   }
   return {};
@@ -20,6 +22,7 @@ function thinkingOptions(
 
 export async function runLlm(
   ai: Ai,
+  model: string,
   system: string,
   user: string,
   maxTokens: number,
@@ -29,13 +32,13 @@ export async function runLlm(
   if (log) console.log("llm prompt", user);
   try {
     const result = await Promise.race([
-      ai.run(MODEL, {
+      ai.run(model, {
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
         ],
         max_tokens: maxTokens,
-        ...thinkingOptions(effort),
+        ...thinkingOptions(model, effort),
       } as Parameters<Ai["run"]>[1]) as Promise<AiResult>,
       new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS);

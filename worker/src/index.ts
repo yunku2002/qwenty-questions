@@ -1,5 +1,5 @@
 import { decryptSecret, encryptSecret } from "./crypto";
-import { extractJson, runLlm } from "./llm";
+import { extractJson, GENERATE_MODEL, ASK_MODEL, runLlm } from "./llm";
 import {
   ASK_SYSTEM,
   GENERATE_SYSTEM,
@@ -129,9 +129,10 @@ async function handleGenerate(
 
   const raw = await runLlm(
     env.AI,
+    GENERATE_MODEL,
     GENERATE_SYSTEM,
     generateUser(language),
-    400,
+    200,
     env.LOG_LLM === "true",
   );
   if (!raw) return fail("llm");
@@ -163,6 +164,7 @@ async function handleValidate(
 
   const raw = await runLlm(
     env.AI,
+    ASK_MODEL,
     VALIDATE_SYSTEM,
     validateUser(secret),
     300,
@@ -208,6 +210,7 @@ async function handleAsk(
 
   const raw = await runLlm(
     env.AI,
+    ASK_MODEL,
     ASK_SYSTEM,
     askUser(plaintext, question),
     800,
