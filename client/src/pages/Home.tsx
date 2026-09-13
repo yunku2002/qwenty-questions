@@ -35,6 +35,7 @@ export function Home({ onPlay }: Props) {
     if (!secret.trim()) return;
     setBusy("validate");
     setError(null);
+    setValidation(null);
     try {
       const result = await validate(secret.trim());
       if (result.status === "FAILURE") {
