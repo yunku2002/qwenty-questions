@@ -57,6 +57,7 @@ Play a twenty questions game with either an encrypted secret (and a hint) shared
 	- Each question should show its number, except when the response is `FAILURE` or `INVALID`.
 - The hint, if given, can be viewed optionally.
 - `/ask` is used for each question and response.
+	- `FAILURE` responses show a button for resending the same question.
 	- `INVALID` questions do not count towards the 20 questions limit.
 	- Only `GUESS_CORRECT` and `REVEAL` are game over conditions.
 	- Since the endpoint already returns a message, the distinction between `YES`, `NO`, `MAYBE`, `N/A`, and `GUESS_WRONG` does not really matter, but the UI may introduce some effects.

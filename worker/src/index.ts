@@ -1,5 +1,5 @@
 import { decryptSecret, encryptSecret } from "./crypto";
-import { extractJson, GENERATE_MODEL, ASK_MODEL, runLlm } from "./llm";
+import { ASK_MODEL, GENERATE_MODEL, runLlm, type LlmFailCause } from "./llm";
 import {
   ASK_SYSTEM,
   GENERATE_SYSTEM,
@@ -43,7 +43,7 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-function fail(cause: "llm" | "parse" | "decrypt" | "input"): Response {
+function fail(cause: LlmFailCause | "decrypt" | "input"): Response {
   return json({ status: "FAILURE", cause });
 }
 
@@ -127,7 +127,7 @@ async function handleGenerate(
   const language = asString(body.language, MAX_UTF8);
   if (!language) return fail("input");
 
-  const raw = await runLlm(
+  const parsed = await runLlm(
     env.AI,
     GENERATE_MODEL,
     GENERATE_SYSTEM,
@@ -135,16 +135,9 @@ async function handleGenerate(
     200,
     env.LOG_LLM === "true",
   );
-  if (!raw) return fail("llm");
+  if (!parsed.ok) return fail(parsed.cause);
 
-  let parsed: unknown;
-  try {
-    parsed = extractJson(raw);
-  } catch {
-    return fail("parse");
-  }
-
-  const obj = parsed as Record<string, unknown>;
+  const obj = parsed.value as Record<string, unknown>;
   if (obj.status === "INVALID") return json({ status: "INVALID" });
   if (obj.status !== "VALID") return fail("parse");
   const secret = asString(obj.secret, MAX_SECRET);
@@ -162,7 +155,7 @@ async function handleValidate(
   const secret = asString(body.secret, MAX_SECRET);
   if (!secret) return fail("input");
 
-  const raw = await runLlm(
+  const parsed = await runLlm(
     env.AI,
     ASK_MODEL,
     VALIDATE_SYSTEM,
@@ -170,16 +163,9 @@ async function handleValidate(
     300,
     env.LOG_LLM === "true",
   );
-  if (!raw) return fail("llm");
+  if (!parsed.ok) return fail(parsed.cause);
 
-  let parsed: unknown;
-  try {
-    parsed = extractJson(raw);
-  } catch {
-    return fail("parse");
-  }
-
-  const obj = parsed as Record<string, unknown>;
+  const obj = parsed.value as Record<string, unknown>;
   if (obj.status !== "FIT" && obj.status !== "UNFIT") {
     return fail("parse");
   }
@@ -208,7 +194,7 @@ async function handleAsk(
     return fail("decrypt");
   }
 
-  const raw = await runLlm(
+  const parsed = await runLlm(
     env.AI,
     ASK_MODEL,
     ASK_SYSTEM,
@@ -217,16 +203,9 @@ async function handleAsk(
     env.LOG_LLM === "true",
     "high",
   );
-  if (!raw) return fail("llm");
+  if (!parsed.ok) return fail(parsed.cause);
 
-  let parsed: unknown;
-  try {
-    parsed = extractJson(raw);
-  } catch {
-    return fail("parse");
-  }
-
-  const obj = parsed as Record<string, unknown>;
+  const obj = parsed.value as Record<string, unknown>;
   if (typeof obj.code !== "string" || !ASK_CODES.has(obj.code)) {
     return fail("parse");
   }

@@ -4,9 +4,12 @@ export const ASK_MODEL = "@cf/openai/gpt-oss-120b";
 export const GENERATE_MODEL = "@cf/qwen/qwen3.8-27b";
 const TIMEOUT_MS = 15000;
 
+export type LlmFailCause = "timeout" | "tokens" | "parse" | "llm";
+
 type AiResult = {
   response?: unknown;
   choices?: Array<{ message?: Record<string, unknown> }>;
+  usage?: { completion_tokens?: unknown };
 };
 
 function thinkingOptions(
@@ -28,8 +31,9 @@ export async function runLlm(
   maxTokens: number,
   log: boolean,
   effort: "low" | "medium" | "high" = "low",
-): Promise<string | null> {
+): Promise<{ ok: true; value: unknown } | { ok: false; cause: LlmFailCause }> {
   if (log) console.log("llm prompt", user);
+  let timedOut = false;
   try {
     const result = await Promise.race([
       ai.run(model, {
@@ -41,20 +45,36 @@ export async function runLlm(
         ...thinkingOptions(model, effort),
       } as Parameters<Ai["run"]>[1]) as Promise<AiResult>,
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS);
+        setTimeout(() => {
+          timedOut = true;
+          reject(new Error("timeout"));
+        }, TIMEOUT_MS);
       }),
     ]);
     if (log) console.log("llm output", JSON.stringify(result, null, 2));
+    if (wasTruncated(result, maxTokens)) {
+      console.warn("llm: token limit");
+      return { ok: false, cause: "tokens" };
+    }
     const text = llmText(result);
     if (text == null) {
       console.warn("llm: unexpected result shape");
-      return null;
+      return { ok: false, cause: "llm" };
     }
-    return text;
+    try {
+      return { ok: true, value: extractJson(text) };
+    } catch {
+      return { ok: false, cause: "parse" };
+    }
   } catch (err) {
     console.warn("llm: run failed", err);
-    return null;
+    return { ok: false, cause: timedOut ? "timeout" : "llm" };
   }
+}
+
+function wasTruncated(result: AiResult, maxTokens: number): boolean {
+  const used = result.usage?.completion_tokens;
+  return typeof used === "number" && used >= maxTokens;
 }
 
 function llmText(result: AiResult): string | null {
@@ -78,7 +98,7 @@ function asText(value: unknown): string | null {
   return null;
 }
 
-export function extractJson(text: string): unknown {
+function extractJson(text: string): unknown {
   const trimmed = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")

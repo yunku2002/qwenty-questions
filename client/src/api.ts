@@ -18,7 +18,14 @@ export const ASK_CODES = [
   "REVEAL",
 ] as const;
 
-export type FailCause = "llm" | "parse" | "decrypt" | "input" | "network";
+export type FailCause =
+  | "timeout"
+  | "tokens"
+  | "parse"
+  | "llm"
+  | "decrypt"
+  | "input"
+  | "network";
 
 export type GenerateResult =
   | { status: "VALID"; secret: string; key: string; nonce: string; hint: string }
@@ -43,12 +50,20 @@ export function isAskCode(value: string): value is AskCode {
 
 export function failureKey(
   cause?: FailCause,
-): "failure" | "failureLlm" | "failureParse" | "failureDecrypt" | "failureInput" | "failureNetwork" {
+):
+  | "failure"
+  | "failureTimeout"
+  | "failureParse"
+  | "failureLlm"
+  | "failureDecrypt"
+  | "failureInput"
+  | "failureNetwork" {
+  if (cause === "timeout" || cause === "tokens") return "failureTimeout";
   if (cause === "parse") return "failureParse";
+  if (cause === "llm") return "failureLlm";
   if (cause === "decrypt") return "failureDecrypt";
   if (cause === "input") return "failureInput";
   if (cause === "network") return "failureNetwork";
-  if (cause === "llm") return "failureLlm";
   return "failure";
 }
 
@@ -71,9 +86,11 @@ function wait(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, TEST_DELAY_MS));
 }
 
+const MOCK_FAIL_CAUSES = ["timeout", "tokens", "parse", "llm"] as const;
+
 function mockGenerate(): GenerateResult {
   const status = pick(["VALID", "VALID", "VALID", "INVALID", "FAILURE"] as const);
-  if (status === "FAILURE") return { status, cause: "llm" };
+  if (status === "FAILURE") return { status, cause: pick(MOCK_FAIL_CAUSES) };
   if (status !== "VALID") return { status };
   return {
     status: "VALID",
@@ -86,13 +103,13 @@ function mockGenerate(): GenerateResult {
 
 function mockValidate(): ValidateResult {
   const status = pick(["FIT", "UNFIT", "FAILURE"] as const);
-  if (status === "FAILURE") return { status, cause: "llm" };
+  if (status === "FAILURE") return { status, cause: pick(MOCK_FAIL_CAUSES) };
   return { status, interpretation: `Test interpretation (${status}).` };
 }
 
 function mockAsk(): AskResult {
   if (Math.random() < 1 / (ASK_CODES.length + 1)) {
-    return { status: "FAILURE", cause: "llm" };
+    return { status: "FAILURE", cause: pick(MOCK_FAIL_CAUSES) };
   }
   const code = pick(ASK_CODES);
   return {

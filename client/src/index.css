@@ -378,6 +378,11 @@ button:disabled {
   margin-bottom: 0.25rem;
 }
 
+.bubble .resend {
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+}
+
 .code {
   letter-spacing: 0.04em;
 }

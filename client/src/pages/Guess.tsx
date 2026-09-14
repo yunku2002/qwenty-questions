@@ -10,6 +10,7 @@ type Message = {
   text: string;
   code?: DisplayCode;
   n?: number;
+  resendUsed?: boolean;
 };
 
 type GuessSession = {
@@ -35,6 +36,21 @@ function codeClass(code: DisplayCode): string {
 
 function codeKey(code: DisplayCode): string {
   return code === "N/A" ? "codeNA" : `code${code}`;
+}
+
+function precedingUserText(messages: Message[], index: number): string | null {
+  for (let i = index - 1; i >= 0; i--) {
+    if (messages[i].role !== "user") continue;
+    const text = messages[i].text.trim();
+    return text || null;
+  }
+  return null;
+}
+
+function resendText(messages: Message[], index: number): string | null {
+  const msg = messages[index];
+  if (msg.role !== "bot" || msg.code !== "FAILURE" || msg.resendUsed) return null;
+  return precedingUserText(messages, index);
 }
 
 export function Guess({ payload }: Props) {
@@ -96,12 +112,19 @@ export function Guess({ payload }: Props) {
     nonce: payload.nonce,
   };
 
-  async function submit(text: string) {
+  async function submit(text: string, hideResendAt?: number) {
     const question = text.trim();
     if (!question || busy) return;
     setBusy(true);
-    setDraft("");
-    setMessages((m) => [...m, { role: "user", text: question }]);
+    setDraft((current) => (current.trim() === question ? "" : current));
+    setMessages((m) => {
+      const next = [...m];
+      if (hideResendAt != null && next[hideResendAt]) {
+        next[hideResendAt] = { ...next[hideResendAt], resendUsed: true };
+      }
+      next.push({ role: "user", text: question });
+      return next;
+    });
     try {
       const result = await ask(envelope, question);
       if (result.status === "FAILURE") {
@@ -173,24 +196,37 @@ export function Guess({ payload }: Props) {
       ) : null}
 
       <div className="chat" ref={chatRef}>
-        {messages.map((msg, i) => (
-          <article key={i} className={`bubble ${msg.role}`}>
-            <header>
-              <span>
-                {msg.role === "user" ? t("question") : t("response")}
-                {msg.n != null ? ` ${msg.n}` : ""}
-              </span>
-              {msg.code && msg.text ? (
-                <span className={`code ${codeClass(msg.code)}`}>
-                  {t(codeKey(msg.code))}
+        {messages.map((msg, i) => {
+          const retry = resendText(messages, i);
+          return (
+            <article key={i} className={`bubble ${msg.role}`}>
+              <header>
+                <span>
+                  {msg.role === "user" ? t("question") : t("response")}
+                  {msg.n != null ? ` ${msg.n}` : ""}
                 </span>
+                {msg.code && msg.text ? (
+                  <span className={`code ${codeClass(msg.code)}`}>
+                    {t(codeKey(msg.code))}
+                  </span>
+                ) : null}
+              </header>
+              <div className={msg.code && !msg.text ? `code ${codeClass(msg.code)}` : undefined}>
+                {msg.text || (msg.code ? t(codeKey(msg.code)) : "")}
+              </div>
+              {retry ? (
+                <button
+                  className="linkish resend"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void submit(retry, i)}
+                >
+                  {t("resendQuestion")}
+                </button>
               ) : null}
-            </header>
-            <div className={msg.code && !msg.text ? `code ${codeClass(msg.code)}` : undefined}>
-              {msg.text || (msg.code ? t(codeKey(msg.code)) : "")}
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       {over && (
