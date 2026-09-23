@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, failureKey, type DisplayCode } from "../api";
+import { copyInput } from "../copy";
 import { sessionFromTurns, shareIdentity, shareUrl, turnsFromMessages, type SharePayload } from "../share";
 import { utf8Field } from "../utf8-input";
 import { MAX_UTF8 } from "../../../shared/utf8";
@@ -73,6 +74,7 @@ export function Guess({ payload }: Props) {
   const [copied, setCopied] = useState(() => saved?.copied ?? false);
   const [shareError, setShareError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const shareLinkInput = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const snapshotRef = useRef<GuessSession>({
     messages,
@@ -306,6 +308,7 @@ export function Guess({ payload }: Props) {
             <label htmlFor="guess-share-link">{t("shareLinkLabel")}</label>
             <input
               id="guess-share-link"
+              ref={shareLinkInput}
               readOnly
               value={shareLink}
               onFocus={(e) => e.currentTarget.select()}
@@ -315,9 +318,10 @@ export function Guess({ payload }: Props) {
             <button
               className="primary"
               type="button"
-              onClick={async () => {
-                await navigator.clipboard.writeText(shareLink);
-                setCopied(true);
+              onClick={() => {
+                if (shareLinkInput.current && copyInput(shareLinkInput.current)) {
+                  setCopied(true);
+                }
               }}
             >
               {copied ? t("copied") : t("copyLink")}

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiConfigured, failureKey, generate, validate } from "../api";
+import { copyInput } from "../copy";
 import { encryptSecret } from "../crypto/envelope";
 import { generateLanguageLabel } from "../i18n";
 import { parseShareInput, shareUrl, type SharePayload } from "../share";
@@ -22,6 +23,7 @@ export function Home({ onPlay }: Props) {
   } | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const linkInput = useRef<HTMLInputElement>(null);
   const [language, setLanguage] = useState(generateLanguageLabel(i18n.language));
   const [shareLink, setShareLink] = useState("");
   const [shareError, setShareError] = useState<string | null>(null);
@@ -158,6 +160,7 @@ export function Home({ onPlay }: Props) {
               <label htmlFor="created-link">{t("shareLinkLabel")}</label>
               <input
                 id="created-link"
+                ref={linkInput}
                 readOnly
                 value={link}
                 onFocus={(e) => e.currentTarget.select()}
@@ -167,9 +170,8 @@ export function Home({ onPlay }: Props) {
               <button
                 className="primary"
                 type="button"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(link);
-                  setCopied(true);
+                onClick={() => {
+                  if (linkInput.current && copyInput(linkInput.current)) setCopied(true);
                 }}
               >
                 {copied ? t("copied") : t("copyLink")}

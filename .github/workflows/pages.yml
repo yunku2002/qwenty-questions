@@ -29,7 +29,6 @@ jobs:
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_PUBLIC_JWK: ${{ vars.VITE_PUBLIC_JWK }}
-          VITE_BASE: ${{ vars.VITE_BASE || format('/{0}/', github.event.repository.name) }}
         run: |
           if [ -z "$VITE_API_URL" ] || [ -z "$VITE_PUBLIC_JWK" ]; then
             echo "Set repository variables VITE_API_URL and VITE_PUBLIC_JWK"
