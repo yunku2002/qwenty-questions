@@ -7,11 +7,11 @@
   --line: #d4cdc0;
   --accent: #9a3412;
   --accent-soft: #f3d8c8;
-  --yes: #3d6b4f;
-  --no: #8a3a32;
-  --maybe: #8a6a1f;
-  --invalid: #6b6660;
-  --reveal: #5b3d8a;
+  --yes: #1b7f4a;
+  --no: #c0272a;
+  --maybe: #c27a00;
+  --invalid: #6a645c;
+  --reveal: #8a45d0;
   --shadow: 0 1px 0 rgb(28 25 20 / 6%);
   --radius: 14px;
   --font: "Noto Sans KR", sans-serif;
@@ -80,13 +80,12 @@ a {
 .app {
   max-width: 42rem;
   margin: 0 auto;
-  padding: 1.25rem 1.1rem 4rem;
+  padding: 1.25rem 1.1rem;
   min-height: 100%;
 }
 
 .app-guess {
   height: 100dvh;
-  padding-bottom: 1.25rem;
   display: flex;
   flex-direction: column;
   overflow: hidden;
